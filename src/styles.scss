@@ -1,0 +1,41 @@
+/* ── Theme: Shades of Pink ─────────────────────────────────────────────────── */
+:root {
+  --pink-50:  #fff0f6;   /* page backgrounds, card tints      */
+  --pink-100: #fce7f3;   /* hover backgrounds, subtle fills   */
+  --pink-200: #fbcfe8;   /* borders, dividers                 */
+  --pink-400: #f472b6;   /* medium accents, badges            */
+  --pink-500: #e8468c;   /* primary brand colour              */
+  --pink-600: #c4307a;   /* hover / darker primary            */
+  --pink-700: #9d1461;   /* deep accent                       */
+  --pink-900: #5c0b3a;   /* very dark text on pink            */
+}
+
+/* ── Global Reset & Base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  color: #2d2d2d;
+  background: var(--pink-50);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { margin: 0; line-height: 1.2; }
+
+a { color: inherit; }
+
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+img { max-width: 100%; display: block; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #e8468c; }
