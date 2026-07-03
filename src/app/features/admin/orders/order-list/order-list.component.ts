@@ -14,6 +14,7 @@ import { Order } from '../../../../shared/models/order.model';
       <div class="container">
         <h1>Orders</h1>
         <div class="filters">
+          <input type="search" placeholder="Search by order #, name or email..." [(ngModel)]="search" (ngModelChange)="onSearch()">
           <select [(ngModel)]="statusFilter" (ngModelChange)="load()">
             <option value="">All Statuses</option>
             @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
@@ -54,7 +55,9 @@ import { Order } from '../../../../shared/models/order.model';
     .admin-page { padding: 2.5rem 0; }
     .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
     h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 1.5rem; }
-    .filters { margin-bottom: 1rem; }
+    .filters { margin-bottom: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .filters input { padding: 0.6rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; min-width: 280px; flex: 1; }
+    .filters input:focus { outline: none; border-color: #e8468c; }
     .filters select { padding: 0.6rem 1rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
     .table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .table th { background: #f8f8f8; padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; color: #666; border-bottom: 1px solid #eee; }
@@ -79,13 +82,22 @@ export class OrderListComponent implements OnInit {
   totalPages = signal(1);
   page = 1;
   statusFilter = '';
+  search = '';
   statuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
+  private searchTimer: any;
 
   ngOnInit() { this.load(); }
   changePage(p: number) { this.page = p; this.load(); }
+
+  onSearch() {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => { this.page = 1; this.load(); }, 350);
+  }
+
   load() {
     this.loading.set(true);
-    this.orderService.getAdminOrders(this.page, 20, this.statusFilter || undefined)
+    this.orderService.getAdminOrders(this.page, 20, this.statusFilter || undefined, this.search || undefined)
       .subscribe({ next: res => { this.orders.set(res.items); this.totalPages.set(res.totalPages); this.loading.set(false); }, error: () => this.loading.set(false) });
   }
 }

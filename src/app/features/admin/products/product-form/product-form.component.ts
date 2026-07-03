@@ -167,15 +167,15 @@ export class ProductFormComponent implements OnInit {
       this.productService.getAdminProduct(this.productId).subscribe(p => {
         this.product.set(p);
         this.form.patchValue({ name: p.name, description: p.description, price: p.price, categoryId: String(p.categoryId), isActive: p.isActive });
-        p.variants.forEach(v => this.variantsArray.push(this.newVariant(v.colour, v.size, v.stockQuantity, v.sku)));
+        p.variants.forEach(v => this.variantsArray.push(this.newVariant(v.colour, v.size, v.stockQuantity, v.sku, v.id)));
       });
     } else {
       this.addVariant();
     }
   }
 
-  newVariant(colour = '', size = 'M', stock = 0, sku = '') {
-    return this.fb.group({ colour: [colour, Validators.required], size: [size], stockQuantity: [stock], sku: [sku] });
+  newVariant(colour = '', size = 'M', stock = 0, sku = '', id: number | null = null) {
+    return this.fb.group({ id: [id], colour: [colour, Validators.required], size: [size], stockQuantity: [stock], sku: [sku] });
   }
 
   addVariant() { this.variantsArray.push(this.newVariant()); }

@@ -1,9 +1,10 @@
-﻿import { Component, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { CartService } from '../../../core/services/cart.service';
 import { OrderService } from '../../../core/services/order.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-checkout',
@@ -45,7 +46,8 @@ import { OrderService } from '../../../core/services/order.service';
             <h2>Shipping Address</h2>
             <div class="field">
               <label>Address Line 1 *</label>
-              <input formControlName="addressLine1" placeholder="12 Rose Street">
+              <input #addressInput formControlName="addressLine1" placeholder="Start typing your address..." autocomplete="off">
+              <p class="field-hint">Start typing to search — city, province and postal code will fill automatically.</p>
             </div>
             <div class="field">
               <label>Address Line 2</label>
@@ -69,13 +71,20 @@ import { OrderService } from '../../../core/services/order.service';
               <input formControlName="postalCode" placeholder="2000">
             </div>
 
+            @if (cancelled()) {
+              <div class="cancelled-notice">
+                ⚠️ Your payment was cancelled. Please try again or choose a different payment method.
+              </div>
+            }
+
             @if (error()) {
               <p class="form-error">{{ error() }}</p>
             }
 
             <button type="submit" class="btn-place" [disabled]="submitting() || cart.items().length === 0">
-              {{ submitting() ? 'Placing Order...' : 'Place Order' }}
+              {{ submitting() ? 'Redirecting to PayFast...' : 'Pay with PayFast' }}
             </button>
+            <p class="payfast-note">🔒 Secure payment via PayFast. We accept credit/debit cards, EFT, and more.</p>
           </form>
 
           <!-- Order Summary -->
@@ -122,6 +131,12 @@ import { OrderService } from '../../../core/services/order.service';
     }
     .btn-place:hover:not(:disabled) { background: #c4307a; }
     .btn-place:disabled { opacity: 0.6; cursor: not-allowed; }
+    .payfast-note { text-align: center; font-size: 0.8rem; color: #888; margin-top: 0.75rem; }
+    .field-hint { font-size: 0.78rem; color: #aaa; margin: 0.25rem 0 0; }
+    .cancelled-notice {
+      background: #fff8e1; border: 1px solid #f59e0b; color: #92400e;
+      padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;
+    }
     .order-summary { background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 1.5rem; }
     .summary-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid #eee; gap: 1rem; }
     .si-info { display: flex; flex-direction: column; gap: 0.2rem; }
@@ -130,13 +145,17 @@ import { OrderService } from '../../../core/services/order.service';
     .summary-line.total { border-top: 2px solid #eee; font-weight: 700; margin-top: 0.5rem; font-size: 1.05rem; }
   `]
 })
-export class CheckoutComponent {
+export class CheckoutComponent implements OnInit, AfterViewInit {
+  @ViewChild('addressInput') addressInputRef!: ElementRef<HTMLInputElement>;
+
   private fb = inject(FormBuilder);
   private orderService = inject(OrderService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   cart = inject(CartService);
   submitting = signal(false);
   error = signal('');
+  cancelled = signal(false);
 
   provinces = ['Gauteng','Western Cape','KwaZulu-Natal','Eastern Cape','Limpopo','Mpumalanga','North West','Northern Cape','Free State'];
 
@@ -153,6 +172,75 @@ export class CheckoutComponent {
   });
 
   get f() { return this.form.controls; }
+
+  ngOnInit() {
+    this.cancelled.set(this.route.snapshot.queryParamMap.get('cancelled') === 'true');
+  }
+
+  ngAfterViewInit() {
+    this.loadGooglePlaces();
+  }
+
+  private loadGooglePlaces() {
+    if ((window as any).google?.maps?.places) {
+      this.initAutocomplete();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${environment.googleMapsApiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => this.initAutocomplete();
+    document.head.appendChild(script);
+  }
+
+  private initAutocomplete() {
+    const autocomplete = new (window as any).google.maps.places.Autocomplete(
+      this.addressInputRef.nativeElement,
+      { types: ['address'], componentRestrictions: { country: 'za' } }
+    );
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.address_components) return;
+
+      const get = (type: string) =>
+        place.address_components.find((c: any) => c.types.includes(type))?.long_name ?? '';
+      const getShort = (type: string) =>
+        place.address_components.find((c: any) => c.types.includes(type))?.short_name ?? '';
+
+      const streetNumber = get('street_number');
+      const route        = get('route');
+      const suburb       = get('sublocality_level_1') || get('sublocality') || get('neighborhood');
+      const city         = get('locality') || get('administrative_area_level_2');
+      const postalCode   = get('postal_code');
+      const provinceName = get('administrative_area_level_1');
+
+      const addressLine1 = [streetNumber, route].filter(Boolean).join(' ') || get('premise');
+
+      this.form.patchValue({
+        addressLine1: addressLine1,
+        addressLine2: suburb || '',
+        city:         city,
+        province:     this.mapProvince(provinceName),
+        postalCode:   postalCode
+      });
+    });
+  }
+
+  private mapProvince(googleProvince: string): string {
+    const map: Record<string, string> = {
+      'Gauteng':          'Gauteng',
+      'Western Cape':     'Western Cape',
+      'KwaZulu-Natal':    'KwaZulu-Natal',
+      'Eastern Cape':     'Eastern Cape',
+      'Limpopo':          'Limpopo',
+      'Mpumalanga':       'Mpumalanga',
+      'North West':       'North West',
+      'Northern Cape':    'Northern Cape',
+      'Free State':       'Free State',
+    };
+    return map[googleProvince] ?? '';
+  }
 
   submit() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
@@ -171,9 +259,21 @@ export class CheckoutComponent {
       postalCode:     v.postalCode!,
       items: this.cart.items().map(i => ({ variantId: i.variantId, quantity: i.quantity }))
     }).subscribe({
-      next: order => {
+      next: res => {
         this.cart.clear();
-        this.router.navigate(['/order-confirmation', order.orderNumber]);
+        // Build a hidden form and POST to PayFast
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = res.payFastUrl;
+        for (const [key, value] of Object.entries(res.payFastFields)) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
       },
       error: err => {
         this.error.set(err.error?.message ?? 'Failed to place order. Please try again.');

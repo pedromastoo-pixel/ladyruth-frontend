@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { Order, PlaceOrderRequest } from '../../shared/models/order.model';
+import { Order, PlaceOrderRequest, PlaceOrderResponse } from '../../shared/models/order.model';
 import { PagedResult } from '../../shared/models/product.model';
 
 @Injectable({ providedIn: 'root' })
@@ -11,7 +11,7 @@ export class OrderService {
   constructor(private http: HttpClient) {}
 
   placeOrder(order: PlaceOrderRequest) {
-    return this.http.post<Order>(`${this.api}/orders`, order);
+    return this.http.post<PlaceOrderResponse>(`${this.api}/orders`, order);
   }
 
   getOrderByNumber(orderNumber: string) {
@@ -19,9 +19,10 @@ export class OrderService {
   }
 
   // Admin
-  getAdminOrders(page = 1, pageSize = 20, status?: string) {
+  getAdminOrders(page = 1, pageSize = 20, status?: string, search?: string) {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (status) params = params.set('status', status);
+    if (search) params = params.set('search', search);
     return this.http.get<PagedResult<Order>>(`${this.api}/admin/orders`, { params });
   }
 

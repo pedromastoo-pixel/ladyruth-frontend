@@ -29,6 +29,12 @@ export interface Order {
   items: OrderItem[];
 }
 
+export interface PlaceOrderResponse {
+  order: Order;
+  payFastUrl: string;
+  payFastFields: { [key: string]: string };
+}
+
 export interface PlaceOrderRequest {
   guestEmail: string;
   guestFirstName: string;

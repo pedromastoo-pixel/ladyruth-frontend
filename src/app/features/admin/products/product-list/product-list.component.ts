@@ -4,11 +4,12 @@ import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../../../core/services/product.service';
 import { ProductListItem } from '../../../../shared/models/product.model';
+import { ImageUrlPipe } from '../../../../shared/pipes/image-url.pipe';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, FormsModule],
+  imports: [RouterLink, CurrencyPipe, FormsModule, ImageUrlPipe],
   template: `
     <div class="admin-page">
       <div class="container">
@@ -36,7 +37,7 @@ import { ProductListItem } from '../../../../shared/models/product.model';
                   <td>
                     <div class="product-name">
                       @if (p.primaryImageUrl) {
-                        <img [src]="p.primaryImageUrl" [alt]="p.name">
+                        <img [src]="p.primaryImageUrl | imageUrl" [alt]="p.name">
                       }
                       <span>{{ p.name }}</span>
                     </div>
