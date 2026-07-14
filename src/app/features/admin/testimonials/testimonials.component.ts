@@ -21,6 +21,7 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
           <table>
             <thead>
               <tr>
+                <th>Photo</th>
                 <th>Customer</th>
                 <th>Quote</th>
                 <th>Product</th>
@@ -33,6 +34,13 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
             <tbody>
               @for (t of testimonials(); track t.id) {
                 <tr>
+                  <td>
+                    @if (t.hasImage) {
+                      <img [src]="svc.imageUrl(t.id)" class="thumb" alt="Photo" />
+                    } @else {
+                      <div class="avatar-sm" [style.background]="avatarBg(t.customerName)">{{ initials(t.customerName) }}</div>
+                    }
+                  </td>
                   <td><strong>{{ t.customerName }}</strong></td>
                   <td class="quote-cell">{{ t.quote }}</td>
                   <td>{{ t.productName || '—' }}</td>
@@ -49,7 +57,7 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="empty">No testimonials yet. Add your first one!</td></tr>
+                <tr><td colspan="8" class="empty">No testimonials yet. Add your first one!</td></tr>
               }
             </tbody>
           </table>
@@ -63,6 +71,23 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
             <div class="modal-header">
               <h2>{{ editing() ? 'Edit' : 'Add' }} Testimonial</h2>
               <button class="close-btn" (click)="closeForm()">✕</button>
+            </div>
+
+            <!-- Photo upload -->
+            <div class="photo-section">
+              @if (imagePreview() || editing()?.hasImage) {
+                <div class="photo-preview">
+                  <img [src]="imagePreview() || (editing() ? svc.imageUrl(editing()!.id) : '')" alt="Preview" />
+                  <button class="remove-photo" (click)="removePhoto()" title="Remove photo">✕</button>
+                </div>
+              } @else {
+                <label class="photo-upload" for="photoInput">
+                  <span class="upload-icon">📷</span>
+                  <span>Upload customer photo</span>
+                  <span class="upload-hint">JPG, PNG — max 5 MB</span>
+                </label>
+                <input id="photoInput" type="file" accept="image/*" (change)="onFileSelected($event)" style="display:none" />
+              }
             </div>
 
             <div class="form-group">
@@ -114,7 +139,7 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
     </div>
   `,
   styles: [`
-    .page { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    .page { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     .page-header h1 { font-size: 1.6rem; margin: 0; }
     .btn-primary {
@@ -129,8 +154,14 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
     th { background: #fce7f3; color: #c4307a; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.85rem 1rem; text-align: left; }
-    td { padding: 0.85rem 1rem; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem; vertical-align: middle; }
-    .quote-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; font-style: italic; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem; vertical-align: middle; }
+    .thumb { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #fce7f3; }
+    .avatar-sm {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem; color: #fff;
+    }
+    .quote-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; font-style: italic; }
     .badge { font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 20px; }
     .badge.active { background: #d1fae5; color: #065f46; }
     .badge.inactive { background: #f3f4f6; color: #6b7280; }
@@ -144,9 +175,30 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
     /* Modal */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
     .modal { background: #fff; border-radius: 16px; padding: 2rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
     .modal-header h2 { margin: 0; font-size: 1.2rem; }
     .close-btn { background: #f5f5f5; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 0.9rem; }
+
+    /* Photo upload */
+    .photo-section { margin-bottom: 1.25rem; }
+    .photo-upload {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.35rem; border: 2px dashed #fbcfe8; border-radius: 12px;
+      padding: 1.5rem; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      text-align: center; color: #888;
+    }
+    .photo-upload:hover { border-color: #e8468c; background: #fff0f6; color: #e8468c; }
+    .upload-icon { font-size: 2rem; }
+    .upload-hint { font-size: 0.75rem; color: #bbb; }
+    .photo-preview { position: relative; display: inline-block; }
+    .photo-preview img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #fce7f3; display: block; }
+    .remove-photo {
+      position: absolute; top: 0; right: 0;
+      background: #ef4444; color: #fff; border: none; border-radius: 50%;
+      width: 26px; height: 26px; cursor: pointer; font-size: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #444; margin-bottom: 0.35rem; }
     .form-group input, .form-group textarea, .form-group select {
@@ -162,7 +214,7 @@ import { Testimonial, UpsertTestimonial } from '../../../shared/models/testimoni
   `]
 })
 export class TestimonialsComponent implements OnInit {
-  private svc = inject(TestimonialService);
+  svc = inject(TestimonialService);
 
   testimonials = signal<Testimonial[]>([]);
   loading = signal(true);
@@ -170,8 +222,20 @@ export class TestimonialsComponent implements OnInit {
   saving = signal(false);
   editing = signal<Testimonial | null>(null);
   error = signal('');
+  imagePreview = signal<string | null>(null);
+  pendingImageFile = signal<File | null>(null);
+  removeImageOnSave = signal(false);
 
   form: UpsertTestimonial = this.emptyForm();
+
+  readonly avatarGradients = [
+    'linear-gradient(135deg, #e8468c, #f472b6)',
+    'linear-gradient(135deg, #c4307a, #e8468c)',
+    'linear-gradient(135deg, #f472b6, #fbcfe8)',
+    'linear-gradient(135deg, #9d1461, #c4307a)',
+  ];
+  avatarBg(name: string) { return this.avatarGradients[name.charCodeAt(0) % this.avatarGradients.length]; }
+  initials(name: string) { return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2); }
 
   ngOnInit() { this.load(); }
 
@@ -184,19 +248,31 @@ export class TestimonialsComponent implements OnInit {
 
   openForm(t?: Testimonial) {
     this.editing.set(t ?? null);
-    this.form = t ? {
-      customerName: t.customerName,
-      quote: t.quote,
-      productName: t.productName,
-      rating: t.rating,
-      isActive: t.isActive,
-      sortOrder: t.sortOrder
-    } : this.emptyForm();
+    this.form = t ? { customerName: t.customerName, quote: t.quote, productName: t.productName, rating: t.rating, isActive: t.isActive, sortOrder: t.sortOrder } : this.emptyForm();
+    this.imagePreview.set(null);
+    this.pendingImageFile.set(null);
+    this.removeImageOnSave.set(false);
     this.error.set('');
     this.showForm.set(true);
   }
 
   closeForm() { this.showForm.set(false); }
+
+  onFileSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.pendingImageFile.set(file);
+    this.removeImageOnSave.set(false);
+    const reader = new FileReader();
+    reader.onload = e => this.imagePreview.set(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  removePhoto() {
+    this.imagePreview.set(null);
+    this.pendingImageFile.set(null);
+    this.removeImageOnSave.set(true);
+  }
 
   save() {
     if (!this.form.customerName.trim() || !this.form.quote.trim()) {
@@ -205,15 +281,30 @@ export class TestimonialsComponent implements OnInit {
     }
     this.saving.set(true);
     this.error.set('');
+
     const req = this.editing()
       ? this.svc.update(this.editing()!.id, this.form)
       : this.svc.create(this.form);
 
     req.subscribe({
-      next: () => { this.saving.set(false); this.closeForm(); this.load(); },
+      next: (saved: any) => {
+        const id = saved.id;
+        const imageFile = this.pendingImageFile();
+        const shouldRemove = this.removeImageOnSave() && this.editing()?.hasImage;
+
+        if (imageFile) {
+          this.svc.uploadImage(id, imageFile).subscribe({ next: () => this.finish(), error: () => this.finish() });
+        } else if (shouldRemove) {
+          this.svc.removeImage(id).subscribe({ next: () => this.finish(), error: () => this.finish() });
+        } else {
+          this.finish();
+        }
+      },
       error: () => { this.saving.set(false); this.error.set('Failed to save. Please try again.'); }
     });
   }
+
+  private finish() { this.saving.set(false); this.closeForm(); this.load(); }
 
   delete(t: Testimonial) {
     if (!confirm(`Delete testimonial from ${t.customerName}?`)) return;

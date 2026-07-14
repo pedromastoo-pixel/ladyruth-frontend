@@ -6,6 +6,7 @@ export interface Testimonial {
   rating: number;
   isActive: boolean;
   sortOrder: number;
+  hasImage: boolean;
   createdAt: string;
 }
 

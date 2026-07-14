@@ -28,4 +28,18 @@ export class TestimonialService {
   delete(id: number) {
     return this.http.delete(`${this.api}/admin/testimonials/${id}`);
   }
+
+  uploadImage(id: number, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post(`${this.api}/admin/testimonials/${id}/image`, form);
+  }
+
+  removeImage(id: number) {
+    return this.http.delete(`${this.api}/admin/testimonials/${id}/image`);
+  }
+
+  imageUrl(id: number): string {
+    return `${this.api}/testimonials/${id}/image`;
+  }
 }

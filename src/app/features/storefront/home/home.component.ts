@@ -61,7 +61,11 @@ import { Testimonial } from '../../../shared/models/testimonial.model';
                 <div class="testimonial-card">
                   <div class="card-inner" (click)="openModal(t)" role="button" tabindex="0" (keydown.enter)="openModal(t)">
                     <div class="buyer-photo">
-                      <div class="avatar-placeholder" [style.background]="avatarBg(t.customerName)">{{ initials(t.customerName) }}</div>
+                      @if (t.hasImage) {
+                        <img class="buyer-img" [src]="testimonialSvc.imageUrl(t.id)" [alt]="t.customerName" />
+                      } @else {
+                        <div class="avatar-placeholder" [style.background]="avatarBg(t.customerName)">{{ initials(t.customerName) }}</div>
+                      }
                       <div class="zoom-hint">🔍 Click to zoom</div>
                       <div class="verified-badge">✓ Verified Buyer</div>
                     </div>
@@ -94,9 +98,13 @@ import { Testimonial } from '../../../shared/models/testimonial.model';
           <div class="lightbox-overlay" (click)="closeModal()">
             <div class="lightbox-card" (click)="$event.stopPropagation()">
               <button class="lightbox-close" (click)="closeModal()">✕</button>
-              <div class="lightbox-avatar" [style.background]="avatarBg(activeTestimonial()!.customerName)">
-                {{ initials(activeTestimonial()!.customerName) }}
-              </div>
+              @if (activeTestimonial()!.hasImage) {
+                <img class="lightbox-img" [src]="testimonialSvc.imageUrl(activeTestimonial()!.id)" [alt]="activeTestimonial()!.customerName" />
+              } @else {
+                <div class="lightbox-avatar" [style.background]="avatarBg(activeTestimonial()!.customerName)">
+                  {{ initials(activeTestimonial()!.customerName) }}
+                </div>
+              }
               <div class="lightbox-verified">✓ Verified Buyer</div>
               <div class="lightbox-stars">{{ '★'.repeat(activeTestimonial()!.rating) }}</div>
               <p class="lightbox-quote">"{{ activeTestimonial()!.quote }}"</p>
@@ -296,6 +304,11 @@ import { Testimonial } from '../../../shared/models/testimonial.model';
       justify-content: center;
       background: #fce7f3;
     }
+    .buyer-img {
+      width: 110px; height: 110px; border-radius: 50%;
+      object-fit: cover; border: 4px solid #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
     .avatar-placeholder {
       width: 110px; height: 110px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -377,6 +390,12 @@ import { Testimonial } from '../../../shared/models/testimonial.model';
       transition: background 0.2s;
     }
     .lightbox-close:hover { background: #e8468c; color: #fff; }
+    .lightbox-img {
+      width: 140px; height: 140px; border-radius: 50%;
+      object-fit: cover; border: 5px solid #fff;
+      box-shadow: 0 8px 30px rgba(232,70,140,0.3);
+      margin: 0 auto 1rem; display: block;
+    }
     .lightbox-avatar {
       width: 140px; height: 140px; border-radius: 50%;
       margin: 0 auto 1rem;
@@ -406,7 +425,7 @@ import { Testimonial } from '../../../shared/models/testimonial.model';
 })
 export class HomeComponent implements OnInit {
   private productService = inject(ProductService);
-  private testimonialService = inject(TestimonialService);
+  testimonialSvc = inject(TestimonialService);
 
   featured = signal<ProductListItem[]>([]);
   loading = signal(true);
@@ -446,7 +465,7 @@ export class HomeComponent implements OnInit {
       next: res => { this.featured.set(res.items); this.loading.set(false); },
       error: () => this.loading.set(false)
     });
-    this.testimonialService.getActive().subscribe({
+    this.testimonialSvc.getActive().subscribe({
       next: list => this.testimonials.set(list),
       error: () => {}
     });
