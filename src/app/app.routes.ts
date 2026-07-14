@@ -70,6 +70,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/orders/order-detail/order-detail.component').then(m => m.OrderDetailComponent)
       },
       {
+        path: 'categories',
+        loadComponent: () => import('./features/admin/categories/categories.component').then(m => m.CategoriesComponent)
+      },
+      {
         path: 'testimonials',
         loadComponent: () => import('./features/admin/testimonials/testimonials.component').then(m => m.TestimonialsComponent)
       },

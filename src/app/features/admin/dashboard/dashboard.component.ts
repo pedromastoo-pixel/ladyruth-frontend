@@ -20,6 +20,11 @@ import { RouterLink } from '@angular/router';
             <h3>Orders</h3>
             <p>View and update customer orders</p>
           </a>
+          <a routerLink="/admin/categories" class="dash-card">
+            <span class="icon">🏷️</span>
+            <h3>Categories</h3>
+            <p>Manage product categories</p>
+          </a>
           <a routerLink="/admin/testimonials" class="dash-card">
             <span class="icon">⭐</span>
             <h3>Testimonials</h3>

@@ -63,7 +63,15 @@ export class ProductService {
     return this.http.get<Category[]>(`${this.api}/admin/categories`);
   }
 
-  createCategory(data: any) {
+  createCategory(data: { name: string; slug: string; isActive: boolean }) {
     return this.http.post<Category>(`${this.api}/admin/categories`, data);
+  }
+
+  updateCategory(id: number, data: { name: string; slug: string; isActive: boolean }) {
+    return this.http.put<Category>(`${this.api}/admin/categories/${id}`, data);
+  }
+
+  deleteCategory(id: number) {
+    return this.http.delete(`${this.api}/admin/categories/${id}`);
   }
 }
