@@ -1,8 +1,10 @@
 ﻿import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProductService } from '../../../core/services/product.service';
+import { TestimonialService } from '../../../core/services/testimonial.service';
 import { ProductCardComponent } from '../../../shared/components/product-card/product-card.component';
 import { ProductListItem } from '../../../shared/models/product.model';
+import { Testimonial } from '../../../shared/models/testimonial.model';
 
 @Component({
   selector: 'app-home',
@@ -55,11 +57,11 @@ import { ProductListItem } from '../../../shared/models/product.model';
 
           <div class="carousel-viewport">
             <div class="carousel-track" [style.transform]="trackTransform()">
-              @for (t of testimonials; track t.name) {
+              @for (t of testimonials(); track t.id) {
                 <div class="testimonial-card">
                   <div class="card-inner" (click)="openModal(t)" role="button" tabindex="0" (keydown.enter)="openModal(t)">
                     <div class="buyer-photo">
-                      <div class="avatar-placeholder" [style.background]="t.bg">{{ t.initials }}</div>
+                      <div class="avatar-placeholder" [style.background]="avatarBg(t.customerName)">{{ initials(t.customerName) }}</div>
                       <div class="zoom-hint">🔍 Click to zoom</div>
                       <div class="verified-badge">✓ Verified Buyer</div>
                     </div>
@@ -67,8 +69,8 @@ import { ProductListItem } from '../../../shared/models/product.model';
                       <div class="stars">★★★★★</div>
                       <p class="quote">"{{ t.quote }}"</p>
                       <div class="buyer-info">
-                        <span class="buyer-name">{{ t.name }}</span>
-                        <span class="buyer-product">{{ t.product }}</span>
+                        <span class="buyer-name">{{ t.customerName }}</span>
+                        <span class="buyer-product">{{ t.productName }}</span>
                       </div>
                     </div>
                   </div>
@@ -92,14 +94,14 @@ import { ProductListItem } from '../../../shared/models/product.model';
           <div class="lightbox-overlay" (click)="closeModal()">
             <div class="lightbox-card" (click)="$event.stopPropagation()">
               <button class="lightbox-close" (click)="closeModal()">✕</button>
-              <div class="lightbox-avatar" [style.background]="activeTestimonial()!.bg">
-                {{ activeTestimonial()!.initials }}
+              <div class="lightbox-avatar" [style.background]="avatarBg(activeTestimonial()!.customerName)">
+                {{ initials(activeTestimonial()!.customerName) }}
               </div>
               <div class="lightbox-verified">✓ Verified Buyer</div>
-              <div class="lightbox-stars">★★★★★</div>
+              <div class="lightbox-stars">{{ '★'.repeat(activeTestimonial()!.rating) }}</div>
               <p class="lightbox-quote">"{{ activeTestimonial()!.quote }}"</p>
-              <p class="lightbox-name">{{ activeTestimonial()!.name }}</p>
-              <p class="lightbox-product">{{ activeTestimonial()!.product }}</p>
+              <p class="lightbox-name">{{ activeTestimonial()!.customerName }}</p>
+              <p class="lightbox-product">{{ activeTestimonial()!.productName }}</p>
             </div>
           </div>
         }
@@ -404,56 +406,49 @@ import { ProductListItem } from '../../../shared/models/product.model';
 })
 export class HomeComponent implements OnInit {
   private productService = inject(ProductService);
+  private testimonialService = inject(TestimonialService);
+
   featured = signal<ProductListItem[]>([]);
   loading = signal(true);
+  testimonials = signal<Testimonial[]>([]);
 
   readonly visibleCount = 3;
   slideIndex = signal(0);
-  maxSlide = computed(() => this.testimonials.length - this.visibleCount);
-  dotArray = computed(() => Array(this.testimonials.length - this.visibleCount + 1).fill(0));
+  maxSlide = computed(() => Math.max(0, this.testimonials().length - this.visibleCount));
+  dotArray = computed(() => Array(Math.max(1, this.testimonials().length - this.visibleCount + 1)).fill(0));
   trackTransform = computed(() => `translateX(-${this.slideIndex() * (100 / this.visibleCount)}%)`);
   prevSlide() { this.slideIndex.update(i => Math.max(0, i - 1)); }
   nextSlide() { this.slideIndex.update(i => Math.min(this.maxSlide(), i + 1)); }
 
-  activeTestimonial = signal<typeof this.testimonials[0] | null>(null);
-  openModal(t: typeof this.testimonials[0]) { this.activeTestimonial.set(t); }
+  activeTestimonial = signal<Testimonial | null>(null);
+  openModal(t: Testimonial) { this.activeTestimonial.set(t); }
   closeModal() { this.activeTestimonial.set(null); }
 
-  testimonials = [
-    {
-      name: 'Naledi M.',
-      initials: 'NM',
-      bg: 'linear-gradient(135deg, #e8468c, #f472b6)',
-      product: 'Floral Wrap Dress',
-      quote: 'I wore this to my cousin\'s lobola and got so many compliments! The quality is absolutely stunning — I\'ll be back for more.'
-    },
-    {
-      name: 'Thandi K.',
-      initials: 'TK',
-      bg: 'linear-gradient(135deg, #c4307a, #e8468c)',
-      product: 'Satin Midi Skirt',
-      quote: 'Finally a local brand that understands our body shapes. The fit was perfect straight out of the bag. No alterations needed!'
-    },
-    {
-      name: 'Zinhle D.',
-      initials: 'ZD',
-      bg: 'linear-gradient(135deg, #f472b6, #fbcfe8)',
-      product: 'Off-Shoulder Blouse',
-      quote: 'The colour is even more beautiful in person. I wore it to my work year-end and felt like the most stylish person in the room.'
-    },
-    {
-      name: 'Ayanda P.',
-      initials: 'AP',
-      bg: 'linear-gradient(135deg, #9d1461, #c4307a)',
-      product: 'Ruched Bodycon Dress',
-      quote: 'Ordered on a Tuesday, arrived Thursday! Fast delivery and the packaging was so cute. The dress is a perfect 10.'
-    },
+  readonly avatarGradients = [
+    'linear-gradient(135deg, #e8468c, #f472b6)',
+    'linear-gradient(135deg, #c4307a, #e8468c)',
+    'linear-gradient(135deg, #f472b6, #fbcfe8)',
+    'linear-gradient(135deg, #9d1461, #c4307a)',
+    'linear-gradient(135deg, #e8468c, #c4307a)',
   ];
+
+  avatarBg(name: string): string {
+    const i = name.charCodeAt(0) % this.avatarGradients.length;
+    return this.avatarGradients[i];
+  }
+
+  initials(name: string): string {
+    return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
+  }
 
   ngOnInit() {
     this.productService.getProducts(1, 8).subscribe({
       next: res => { this.featured.set(res.items); this.loading.set(false); },
       error: () => this.loading.set(false)
+    });
+    this.testimonialService.getActive().subscribe({
+      next: list => this.testimonials.set(list),
+      error: () => {}
     });
   }
 }

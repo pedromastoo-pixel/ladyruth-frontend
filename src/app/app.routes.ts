@@ -69,6 +69,10 @@ export const routes: Routes = [
         path: 'orders/:id',
         loadComponent: () => import('./features/admin/orders/order-detail/order-detail.component').then(m => m.OrderDetailComponent)
       },
+      {
+        path: 'testimonials',
+        loadComponent: () => import('./features/admin/testimonials/testimonials.component').then(m => m.TestimonialsComponent)
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
